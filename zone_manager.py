@@ -83,7 +83,13 @@ class ZoneManager:
         """Evaluates whether we must sprint immediately to avoid zone collapse."""
         next_center = zone_obs.get("next_center", [0.0, 0.0])
         next_radius = float(zone_obs.get("next_radius", 380.0))
+        cur_center = zone_obs.get("center", [0.0, 0.0])
+        cur_radius = float(zone_obs.get("radius", 560.0))
+        shrink_start = float(zone_obs.get("shrink_start", 0.0))
         shrink_end = float(zone_obs.get("shrink_end", 999.0))
+
+        dist_to_cur_center = math.hypot(my_pos[0] - cur_center[0], my_pos[1] - cur_center[1])
+        outside_cur_zone = dist_to_cur_center >= (cur_radius - 8.0)
 
         dist_to_next_center = math.hypot(my_pos[0] - next_center[0], my_pos[1] - next_center[1])
         dist_to_next_rim = max(0.0, dist_to_next_center - (next_radius - 10.0))
@@ -91,6 +97,8 @@ class ZoneManager:
         time_to_walk = dist_to_next_rim / max(1.0, walk_speed)
         time_left = max(0.0, shrink_end - current_t)
 
-        # Urgent if arrival time exceeds window minus 8s safety margin
-        is_urgent = (time_to_walk + 8.0) >= time_left or dist_to_next_center > next_radius
+        is_shrinking_soon = (shrink_start - current_t) < 15.0
+        time_critical = is_shrinking_soon and ((time_to_walk + 8.0) >= time_left)
+
+        is_urgent = outside_cur_zone or (time_critical and dist_to_next_center > next_radius - 5.0)
         return is_urgent, dist_to_next_rim

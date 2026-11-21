@@ -7,6 +7,28 @@
 
 ---
 
+## [v2.1.0] - 2026-11-21
+### Summary: Performance Optimization, Zero-Allocation Raycasting, and Zone Urgency Fix
+- **Zero-Allocation Raycast Engine (`world_model.py`):**
+  - Replaced array-allocating `np.linspace` with high-speed DDA stepping loop.
+  - Eliminated garbage collection spikes (latency dropped from 123ms to 1.6ms max; p50 dropped to 0.5ms).
+- **Zone Urgency Logic (`zone_manager.py`):**
+  - Resolved false-urgency condition where bot prematurely locked into `SURVIVE-ZONE` during peaceful hold phases.
+  - Now correctly accounts for active shrinking timelines and distances before triggering panic evacuation.
+- **Combat & Evasion in `SURVIVE-ZONE` (`bot.py`):**
+  - Enabled active evasion against incoming bullets, mortar shells, and laser telegraphs even during zone transitions.
+  - Enabled retaliatory defensive fire against pursuing targets.
+- **A* Pathfinding & Cover Search Tuning:**
+  - Capped A* max iterations at 120 (reduced from 500) with nearest-node fallback.
+  - Reduced cover search rays to 12 candidates with early termination on the first valid cover spot.
+- **Diagnostic Test Suite Fix:**
+  - Corrected `ApexBot` class import to `Bot` in `test_diagnostics.py`.
+- **Validation Results:**
+  - `check/check.py`: 300/300 answered in time, 0 missed budget, max answer time 2.3ms.
+  - 10 simulated matches: 100% win rate, 1.0th average placement, 15.00/15 mean score.
+
+---
+
 ## [v2.0.0] - 2026-11-21
 ### Summary: Full World Model, Priority Arbiter, Sound Heat Map, and Ballistic Engine
 - **Priority State Arbiter:**

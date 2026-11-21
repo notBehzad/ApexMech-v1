@@ -35,7 +35,7 @@ class PathPlanner:
         self,
         start_pos: List[float],
         goal_pos: List[float],
-        max_iters: int = 500,
+        max_iters: int = 120,
     ) -> List[List[float]]:
         """A* search on 4m grid. Returns list of 2D world waypoints."""
         sx = int(np.clip((start_pos[0] - self.min_x) / self.step, 0, self.nx - 1))

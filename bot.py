@@ -159,8 +159,21 @@ class Bot:
                 mf.draw.label("STATE: SURVIVE-ZONE")
                 safe_pt = self.zone_mgr.get_safe_hold_point(my_pos, zone_obs, self.wm)
                 state_move, state_boost = self._navigate_toward(my_pos, safe_pt, t, force_sprint=not in_zone)
-                # Keep aim toward interior or threat while retreating
-                state_aim = [self.last_threat_bearing if under_fire else math.atan2(safe_pt[1] - my_pos[1], safe_pt[0] - my_pos[0]), 0.0]
+                # If active incoming projectile or laser threat, blend evasion
+                if proj_dodge is not None or laser_dodge is not None:
+                    d_vec = proj_dodge[0] if proj_dodge else laser_dodge
+                    state_move = [state_move[0] * 0.6 + d_vec[0] * 0.4, state_move[1] * 0.6 + d_vec[1] * 0.4]
+                    state_boost = my_energy > 20.0
+                # Face threat while retreating to prevent rear damage multiplier (1.5x)
+                if target_enemy:
+                    state_aim = [math.atan2(target_enemy.pos[1] - my_pos[1], target_enemy.pos[0] - my_pos[0]), 0.0]
+                    dist_e = math.hypot(target_enemy.pos[0] - my_pos[0], target_enemy.pos[1] - my_pos[1])
+                    if dist_e < 80.0 and under_fire:
+                        fire_slots[0] = True
+                elif under_fire:
+                    state_aim = [self.last_threat_bearing, 0.0]
+                else:
+                    state_aim = [math.atan2(safe_pt[1] - my_pos[1], safe_pt[0] - my_pos[0]), 0.0]
 
             # -----------------------------------------------------
             # 2. EVADE (Incoming bullets, shells, charged lasers)
@@ -253,9 +266,9 @@ class Bot:
             act["move"] = [0.0, 0.0]
             act["aim"] = [self.last_threat_bearing, 0.0]
 
-        # Ensure tick execution stays well inside 25ms
+        # Ensure tick execution stays well inside 20ms target
         elapsed = (time.perf_counter() - tick_start) * 1000.0
-        if elapsed > 30.0:
+        if elapsed > 20.0:
             print(f"[ApexMech WARN] Tick {tick} took {elapsed:.1f}ms", file=sys.stderr, flush=True)
 
         self.diag.update(obs, act)
@@ -384,10 +397,10 @@ class Bot:
         next_center = zone_obs.get("next_center", [0.0, 0.0])
         next_radius = float(zone_obs.get("next_radius", 380.0))
 
-        # Check concentric rings; prioritize positions hugging building walls
-        for r in (6.0, 12.0, 18.0, 24.0):
-            for k in range(8):
-                ang = k * (2.0 * math.pi / 8)
+        # Check 2 concentric rings (8m, 16m), 6 angles each
+        for r in (8.0, 16.0):
+            for k in range(6):
+                ang = k * (2.0 * math.pi / 6)
                 cx = my_pos[0] + r * math.cos(ang)
                 cy = my_pos[1] + r * math.sin(ang)
 
@@ -395,13 +408,13 @@ class Bot:
                     continue
                 if not self.wm.is_walkable(cx, cy):
                     continue
-                if self.wm.get_wall_dist(cx, cy) > 10.0:
+                if self.wm.get_wall_dist(cx, cy) > 8.0:
                     continue
 
                 if threat_pos:
                     if not self.wm.has_line_of_sight([threat_pos[0], threat_pos[1], threat_pos[2] + 7.0], [cx, cy, my_pos[2] + 4.5]):
                         return [cx, cy]
-                elif self.wm.get_cover_score(cx, cy) >= 8.0:
+                elif self.wm.get_cover_score(cx, cy) >= 7.0:
                     return [cx, cy]
 
         return None

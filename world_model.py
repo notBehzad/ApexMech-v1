@@ -185,7 +185,7 @@ class WorldModel:
         return 0.0
 
     def has_line_of_sight(self, from_pt: List[float], to_pt: List[float]) -> bool:
-        """Fast 3D line-of-sight check against building heights and terrain."""
+        """High-performance zero-allocation 3D line-of-sight check against building heights and terrain."""
         x0, y0, z0 = from_pt[0], from_pt[1], from_pt[2]
         x1, y1, z1 = to_pt[0], to_pt[1], to_pt[2]
 
@@ -196,27 +196,34 @@ class WorldModel:
         if dist_2d < 1e-4:
             return True
 
-        # Sample along ray in 2m intervals
         steps = max(2, int(dist_2d / self.res_2m))
-        ts = np.linspace(0.0, 1.0, steps + 1)
-        xs = x0 + ts * dx
-        ys = y0 + ts * dy
-        zs = z0 + ts * dz
+        step_x = dx / steps
+        step_y = dy / steps
+        step_z = dz / steps
 
-        ixs = np.clip(((xs - self.min_x) / self.res_2m).astype(int), 0, self.nx_2m - 1)
-        iys = np.clip(((ys - self.min_y) / self.res_2m).astype(int), 0, self.ny_2m - 1)
+        curr_x = x0
+        curr_y = y0
+        curr_z = z0
 
-        # Check solid collision or building top occlusion
-        is_solid = self.solid_2m[iys, ixs]
-        b_tops = self.building_top_2m[iys, ixs]
-        g_heights = self.ground_h_2m[iys, ixs]
+        solid = self.solid_2m
+        b_tops = self.building_top_2m
+        g_heights = self.ground_h_2m
+        min_x = self.min_x
+        min_y = self.min_y
+        res = self.res_2m
+        nx = self.nx_2m
+        ny = self.ny_2m
 
-        # Ignore endpoints (start and end mech centers)
-        if len(ts) > 2:
-            mid = slice(1, -1)
-            blocked_building = is_solid[mid] & (zs[mid] <= b_tops[mid])
-            blocked_ground = zs[mid] < g_heights[mid]
-            if np.any(blocked_building | blocked_ground):
-                return False
+        # Skip endpoint mech positions
+        for _ in range(1, steps):
+            curr_x += step_x
+            curr_y += step_y
+            curr_z += step_z
+
+            ix = int((curr_x - min_x) / res)
+            iy = int((curr_y - min_y) / res)
+            if 0 <= ix < nx and 0 <= iy < ny:
+                if (solid[iy, ix] and curr_z <= b_tops[iy, ix]) or curr_z < g_heights[iy, ix]:
+                    return False
 
         return True

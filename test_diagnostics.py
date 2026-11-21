@@ -11,7 +11,7 @@ if HERE not in sys.path:
     sys.path.insert(0, HERE)
 
 from diagnostics import MatchDiagnostics
-from bot import ApexBot
+from bot import Bot
 
 
 class TestMatchDiagnostics(unittest.TestCase):
@@ -113,7 +113,7 @@ class TestMatchDiagnostics(unittest.TestCase):
         with gzip.open(stream_path, "rt") as f:
             hello = json.loads(f.readline())
             hello["map"]["dir"] = arena_dir
-            bot = ApexBot(hello)
+            bot = Bot(hello)
             
             end_msg = None
             for line in f:
