@@ -11,6 +11,7 @@ from ballistics import (
     solve_laser_aim,
     solve_mortar_lead,
 )
+from diagnostics import MatchDiagnostics
 from geometry import aim_to_vec3, angle_diff, v2_dist, v2_norm, v3_dist, vec3_to_aim
 import mechfight as mf
 from tactics import (
@@ -42,6 +43,10 @@ class ApexBot:
         self.last_path_t: float = -999.0
         self.stuck_ticks: int = 0
         self.prev_pos: Optional[List[float]] = None
+
+        # Diagnostics telemetry
+        self.diag = MatchDiagnostics(enabled=True)
+        self.diag.on_hello(hello)
 
     def act(self, obs: mf.Observation) -> mf.Action:
         me = obs["self"]
@@ -340,7 +345,13 @@ class ApexBot:
         if cover_pt:
             mf.draw.point(cover_pt, "#20ff20", 5)
 
+        # Telemetry update
+        self.diag.update(obs, act)
+
         return act
+
+    def on_end(self, end_msg: Dict[str, Any]):
+        self.diag.on_end(end_msg)
 
 
 if __name__ == "__main__":

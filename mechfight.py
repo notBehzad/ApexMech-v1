@@ -537,6 +537,11 @@ def run(make_bot: Any) -> None:
             elif kind == "obs":
                 latest = msg
             elif kind == "end":
+                if bot is not None and hasattr(bot, "on_end"):
+                    try:
+                        bot.on_end(msg)
+                    except Exception:
+                        log(traceback.format_exc())
                 return
         if latest is None:
             continue
