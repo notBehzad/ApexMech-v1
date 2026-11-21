@@ -313,6 +313,8 @@ class Bot:
             dx = wp[0] - my_pos[0]
             dy = wp[1] - my_pos[1]
             mag = math.hypot(dx, dy)
+            if mag < 1e-4:
+                return [0.0, 0.0], force_sprint
             return [dx / max(1e-4, mag), dy / max(1e-4, mag)], force_sprint
         return [0.0, 0.0], False
 
